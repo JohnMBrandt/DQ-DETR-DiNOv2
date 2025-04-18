@@ -455,14 +455,14 @@ def make_coco_transforms(image_set, fix_size=False, strong_aug=False, args=None)
 
     normalize = T.Compose([
         T.ToTensor(),
-        T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+        T.Normalize([0.420, 0.411, 0.2956], [0.21258, 0.156, 0.143])
     ])
 
     # config the params for data aug
-    scales = [480, 512, 544, 576, 608, 640, 672, 704, 736, 768, 800]
-    max_size = 1333
-    scales2_resize = [400, 500, 600]
-    scales2_crop = [384, 600]
+    scales = [512]
+    max_size = 512
+    scales2_resize = [512]
+    scales2_crop = [512]
     
     # update args from config files
     scales = getattr(args, 'data_aug_scales', scales)
@@ -631,6 +631,14 @@ def build(image_set, args):
             "val": (root / "images/val", root / "annotations" / 'aitodv2_val.json'),
             "eval_debug": (root / "images/val", root / "annotations" / 'aitodv2_val.json'),
             "test": (root / "images/test", root / "annotations" / 'aitodv2_test.json' ),
+        }
+    if args.dataset_file == 'tree':
+        PATHS = {
+            "train": (root / "images/train", root / "annotations" / 'train.json'),
+            "trainval": (root / "images/train", root / "annotations" / 'train.json'),
+            "val": (root / "images/val", root / "annotations" / 'val.json'),
+            "eval_debug": (root / "images/val", root / "annotations" / 'val.json'),
+            "test": (root / "images/val", root / "annotations" / 'val.json' ),
         }
 
     # add some hooks to datasets

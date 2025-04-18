@@ -24,7 +24,7 @@ from torch import nn
 from torchvision.models._utils import IntermediateLayerGetter
 from typing import Dict, List
 
-
+from .SSLVisionTransformer import SSLVisionTransformer
 from util.misc import NestedTensor, clean_state_dict, is_main_process
 from .position_encoding import build_position_encoding
 
@@ -145,6 +145,36 @@ class Joiner(nn.Sequential):
         return out, pos
 
 
+class VitBackboneAdapter(nn.Module):
+    """
+    Wraps your SSLVisionTransformer so it looks like a
+    torchvision‐ResNet‐style backbone returning an OrderedDict
+    of NestedTensor.
+    """
+    def __init__(self, vit: SSLVisionTransformer, out_indices, patch_size):
+        super().__init__()
+        self.vit = vit
+        self.out_indices = out_indices
+        self.patch_size = patch_size
+
+    def forward(self, tensor_list: NestedTensor):
+        x, mask = tensor_list.tensors, tensor_list.mask
+        # 1) run ViT → returns tuple of B×C×H×W features
+        feats = self.vit(x)
+
+        out: OrderedDict[str, NestedTensor] = OrderedDict()
+        for idx, feat in zip(self.out_indices, feats):
+            # 2) downsample the mask to this feature’s resolution
+            _, C, H, W = feat.shape
+            m = F.interpolate(mask[None].float(),
+                              size=(H, W),
+                              mode="nearest")[0].to(torch.bool)
+            out[f"stage{idx}"] = NestedTensor(feat, m)
+        return out
+
+
+
+
 def build_backbone(args):
     """
     Useful args:
@@ -156,28 +186,57 @@ def build_backbone(args):
         - use_checkpoint: for swin only for now
 
     """
-    position_embedding = build_position_encoding(args)
-    train_backbone = args.lr_backbone > 0
-    if not train_backbone:
-        raise ValueError("Please set lr_backbone > 0")
-    return_interm_indices = args.return_interm_indices
-    assert return_interm_indices in [[0,1,2,3], [1,2,3], [3]]
-    backbone_freeze_keywords = args.backbone_freeze_keywords
-    use_checkpoint = getattr(args, 'use_checkpoint', False)
-
     if args.backbone in ['resnet50', 'resnet101']:
-        backbone = Backbone(args.backbone, train_backbone, args.dilation,   
-                                return_interm_indices,   
-                                batch_norm=FrozenBatchNorm2d)
-        bb_num_channels = backbone.num_channels
+        position_embedding = build_position_encoding(args)
+        train_backbone = args.lr_backbone > 0
+        if not train_backbone:
+            raise ValueError("Please set lr_backbone > 0")
+        return_interm_indices = args.return_interm_indices
+        assert return_interm_indices in [[0,1,2,3], [1,2,3], [3]]
+        backbone_freeze_keywords = args.backbone_freeze_keywords
+        use_checkpoint = getattr(args, 'use_checkpoint', False)
+
+        if args.backbone in ['resnet50', 'resnet101']:
+            backbone = Backbone(args.backbone, train_backbone, args.dilation,   
+                                    return_interm_indices,   
+                                    batch_norm=FrozenBatchNorm2d)
+            bb_num_channels = backbone.num_channels
+        else:
+            raise NotImplementedError("Unknown backbone {}".format(args.backbone))
+        
+
+        assert len(bb_num_channels) == len(return_interm_indices), f"len(bb_num_channels) {len(bb_num_channels)} != len(return_interm_indices) {len(return_interm_indices)}"
+
+    elif args.backbone in ['SSLVisionTransformer', 'ssl_vit']:
+        # instantiate your ViT
+        vit = SSLVisionTransformer(
+            img_size=args.img_size,
+            patch_size=args.patch_size,
+            embed_dim=args.embed_dim,
+            depth=args.depth,
+            num_heads=args.num_heads,
+            drop_path_rate=args.drop_path_rate,
+            mlp_ratio=args.mlp_ratio,
+            qkv_bias=args.qkv_bias,
+            pretrained=args.pretrained,
+            out_indices=args.out_indices,
+            frozen_stages=args.frozen_stages,
+            init_cfg=dict(
+                type='Pretrained', checkpoint='/Volumes/Macintosh HD/Users/work/Documents/GitHub/HighResCanopyHeight-main/saved_checkpoints/SSLhuge_satellite.pth')#/home/ubuntu/mmdetection/models/SSLhuge_satellite.pth')
+        )
+        # adapter → now it looks like a ResNet‐style backbone
+        backbone = VitBackboneAdapter(
+            vit=vit,
+            out_indices=args.out_indices,
+            patch_size=(args.patch_size, args.patch_size),
+        )
+        # these must match what your FPN produces before the Neck
+        num_channels = [320, 640, args.embed_dim, args.embed_dim]
+
     else:
-        raise NotImplementedError("Unknown backbone {}".format(args.backbone))
-    
-
-    assert len(bb_num_channels) == len(return_interm_indices), f"len(bb_num_channels) {len(bb_num_channels)} != len(return_interm_indices) {len(return_interm_indices)}"
-
+        raise NotImplementedError(f"Unknown backbone {args.backbone}")
 
     model = Joiner(backbone, position_embedding)
-    model.num_channels = bb_num_channels 
-    assert isinstance(bb_num_channels, List), "bb_num_channels is expected to be a List but {}".format(type(bb_num_channels))
+    model.num_channels = num_channels 
+    assert isinstance(num_channels, List), "num_channels is expected to be a List but {}".format(type(num_channels))
     return model

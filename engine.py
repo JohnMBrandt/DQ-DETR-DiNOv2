@@ -17,7 +17,7 @@ import util.misc as utils
 from datasets.coco_eval import CocoEvaluator
 from datasets.panoptic_eval import PanopticEvaluator
 
-print_freq = 5000
+print_freq = 50
 CCM_LOSS = torch.nn.CrossEntropyLoss()
 ccm_coeff = 1
 

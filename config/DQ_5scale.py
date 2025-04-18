@@ -1,6 +1,6 @@
 _base_ = ['coco_transformer.py']
 
-num_classes=9
+num_classes=1
 lr = 0.0001
 param_dict_type = 'default'
 lr_backbone = 1e-05
@@ -8,7 +8,7 @@ lr_backbone_names = ['backbone.0']
 lr_linear_proj_names = ['reference_points', 'sampling_offsets']
 lr_linear_proj_mult = 0.1
 ddetr_lr_param = False
-batch_size = 1
+batch_size = 2
 weight_decay = 0.0001
 epochs = 24
 lr_drop = 11
@@ -18,6 +18,7 @@ onecyclelr = False
 multi_step_lr = True
 lr_drop_list = [13, 23]
 val_epoch = [23]
+#output_dir = 'tmp/'
 # dataset_file='aitod_v2'
 
 ccm_params = [10, 100, 500]
@@ -27,7 +28,7 @@ find_unused_parameters = False
 
 modelname = 'dqdetr'
 frozen_weights = None
-backbone = 'resnet50'
+backbone = 'SSLVisionTransformer'
 use_checkpoint = False
 dilation = False
 position_embedding = 'sine'
@@ -39,7 +40,7 @@ enc_layers = 6
 dec_layers = 6
 unic_layers = 0
 pre_norm = False
-dim_feedforward = 2048
+dim_feedforward = 1024
 hidden_dim = 256
 dropout = 0.0
 nheads = 8
@@ -56,7 +57,7 @@ dabdetr_deformable_decoder = False
 use_deformable_box_attn = False
 box_attn_type = 'roi_align'
 dec_layer_number = None
-num_feature_levels = 5
+num_feature_levels = 4 # 5
 enc_n_points = 4
 dec_n_points = 4
 decoder_layer_noise = False
@@ -93,7 +94,7 @@ focal_alpha = 0.25
 decoder_sa_type = 'sa'
 matcher_type = 'HungarianMatcher'
 decoder_module_seq = ['sa', 'ca', 'ffn']
-nms_iou_threshold = -1
+nms_iou_threshold = 0.1
 
 dec_pred_bbox_embed_share = True
 dec_pred_class_embed_share = True
@@ -113,4 +114,17 @@ ema_decay = 0.9997
 ema_epoch = 0
 
 use_detached_boxes_dec_out = False
+
+# Backbone
+img_size = 512
+patch_size = 16
+embed_dim = 1280
+depth = 32
+num_heads = 20
+drop_path_rate = 0.0
+mlp_Ratio = 4
+qkv_bias = True
+pretrained = None
+out_indices = [5, 14, 21, 31]
+frozen_stages = 100
 

@@ -12,13 +12,13 @@ import copy
 import numpy as np
 import torch
 
-from aitodpycocotools.cocoeval import COCOeval
-from aitodpycocotools.coco import COCO
-import aitodpycocotools.mask as mask_util
+#from aitodpycocotools.cocoeval import COCOeval
+#from aitodpycocotools.coco import COCO
+#import aitodpycocotools.mask as mask_util
 
 from util.misc import all_gather
 
-
+''
 class CocoEvaluator(object):
     def __init__(self, coco_gt, iou_types, useCats=True):
         assert isinstance(iou_types, (list, tuple))

@@ -34,7 +34,7 @@ def get_args_parser():
 
     # dataset parameters
     parser.add_argument('--dataset_file', default='aitod_v2') 
-    parser.add_argument('--coco_path', type=str, default='/comp_robot/cv_public_dataset/COCO2017/')
+    parser.add_argument('--coco_path', type=str, default='../mmdetection/data/tree-may-3/')
     parser.add_argument('--coco_panoptic_path', type=str) 
     parser.add_argument('--remove_difficult', action='store_true')
     parser.add_argument('--fix_size', action='store_true')
@@ -250,7 +250,7 @@ def main(args):
                 del ema_m
                 ema_m = ModelEma(model, args.ema_decay)        
 
-
+    '''
     if args.eval:
         os.environ['EVAL_FLAG'] = 'TRUE'
         test_stats, coco_evaluator = evaluate(model, criterion, postprocessors,
@@ -264,7 +264,7 @@ def main(args):
                 f.write(json.dumps(log_stats) + "\n")
 
         return
-
+    '''
     start_time = time.time()
     best_map_holder = BestMetricHolder(use_ema=args.use_ema)
     
